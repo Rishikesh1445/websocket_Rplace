@@ -12,29 +12,51 @@ const server = app.listen(process.env.PORT || 8000, () => {
 });
 
 const wss = new WebSocketServer({ server });
-
 const clients = new Set();
+const coloredBoxes = new Set();
 
 wss.on('connection', (ws) => {
   clients.add(ws);
   console.log('New client connected');
 
+  ws.send(JSON.stringify({
+    type: 'initialState',
+    coloredBoxes: Array.from(coloredBoxes)
+  }));
+
   ws.on('message', (message) => {
-    const parsedMessage = JSON.parse(message);
-    const broadcastData = JSON.stringify(parsedMessage);
-    
-    clients.forEach((client) => {
-      if (client !== ws && client.readyState === ws.OPEN) {
-        client.send(broadcastData);
+    try {
+      const data = JSON.parse(message);
+      
+      if (data.type === 'boxClick') {
+        // Toggle the box in the server state
+        if (coloredBoxes.has(data.boxNumber)) {
+          coloredBoxes.delete(data.boxNumber);
+        } else {
+          coloredBoxes.add(data.boxNumber);
+        }
+        
+        // Broadcast the toggle to all clients
+        const broadcastData = JSON.stringify({
+          type: 'boxClick',
+          boxNumber: data.boxNumber
+        });
+        
+        clients.forEach((client) => {
+          if (client.readyState === ws.OPEN) {
+            client.send(broadcastData);
+          }
+        });
       }
-    });
+    } catch (error) {
+      console.error('Error processing message:', error);
+    }
   });
 
   ws.on('close', () => {
     clients.delete(ws);
     console.log('Client disconnected');
   });
-
 
   ws.on('error', (error) => {
     console.error('WebSocket error:', error);
