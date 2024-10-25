@@ -44,3 +44,14 @@ wss.on('connection', (ws) => {
 server.on('error', (error) => {
   console.error('Server error:', error);
 });
+
+const keepAlive = () => {
+  const url = "https://websocket-859x.onrender.com";
+  setInterval(() => {
+    fetch(url)
+      .then(response => console.log("Keep-alive ping sent"))
+      .catch(err => console.error("Keep-alive error:", err));
+  }, 14 * 60 * 1000);
+};
+
+keepAlive();
